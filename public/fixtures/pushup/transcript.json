@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "words": [
+    {
+      "text": "Set",
+      "startMs": 120,
+      "endMs": 280
+    },
+    {
+      "text": "your",
+      "startMs": 280,
+      "endMs": 420
+    },
+    {
+      "text": "stance",
+      "startMs": 420,
+      "endMs": 720
+    },
+    {
+      "text": "before",
+      "startMs": 900,
+      "endMs": 1100
+    },
+    {
+      "text": "the",
+      "startMs": 1100,
+      "endMs": 1220
+    },
+    {
+      "text": "pushup",
+      "startMs": 1220,
+      "endMs": 1600
+    },
+    {
+      "text": "rep",
+      "startMs": 1600,
+      "endMs": 1880
+    }
+  ],
+  "fullText": "Set your stance before the pushup rep",
+  "durationMs": 2000
+}

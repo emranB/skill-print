@@ -1,0 +1,39 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# dependencies and build
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# tests
+playwright-report/
+test-results/
+blob-report/
+
+# local notes
+elevenlabs-agent.json
+temp/
+.cursor/
+.agents/
+skills-lock.json
+
+# marketing working files (keep the two finished mp4s)
+videos/_raw/
+videos/slides/
+videos/*-raw.webm
+videos/_raw-manifest.json
+videos/skill-print-team.mp4
+
+# os and logs
+.DS_Store
+Thumbs.db
+*.log
+nul
+*.tmp
+lessons/*.tmp

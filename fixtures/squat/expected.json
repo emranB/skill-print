@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "expectedCycles": 1,
+  "notes": "Squat Level C geometry-only fixture; one outbound/return checkpoint path; student-good one REP_SUCCESS at default leniency 0.25."
+}

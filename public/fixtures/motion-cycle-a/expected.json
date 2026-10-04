@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "expectedCycles": 1,
+  "notes": "Teacher lower-body excursion: reference at frame 0, one PoseSegmenter cycle (~2000ms). student-good should achieve one REP_SUCCESS; student-bad must not."
+}
