@@ -135,50 +135,7 @@ a.button-link {
   height: 100dvh;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-}
-
-.app-frame {
-  position: relative;
-  display: flex;
   flex-direction: row;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-}
-
-.company-footer {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0.45rem 1rem;
-  border-top: 1px solid var(--line);
-  background: #0a0e0c;
-}
-
-.company-footer a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-decoration: none;
-}
-
-.company-footer a:hover {
-  color: var(--ink);
-}
-
-.company-footer img {
-  width: 2.4rem;
-  height: 2.4rem;
-  object-fit: cover;
-  object-position: left center;
-  border-radius: 8px;
-  background: #000;
 }
 
 .logs-column {
@@ -275,6 +232,39 @@ a.button-link {
   gap: 1.5rem;
   align-items: center;
   padding: 0.25rem 0 0.5rem;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.company-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.company-mark:hover {
+  color: var(--ink);
+}
+
+.company-mark img {
+  width: 1.35rem;
+  height: 1.35rem;
+  object-fit: cover;
+  object-position: left center;
+  border-radius: 4px;
+  background: #000;
 }
 
 .brand {
@@ -1294,16 +1284,11 @@ a.button-link {
     overflow: auto;
   }
 
-  .app-shell,
-  .app-frame {
+  .app-shell {
     flex-direction: column;
     height: auto;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  .app-shell {
     min-height: 100dvh;
+    overflow: visible;
   }
 
   .logs-column,

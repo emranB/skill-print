@@ -17,38 +17,30 @@ export function App() {
     <AppProvider>
       <ApprenticeProvider>
         <div className={`app-shell ${logsOpen ? "logs-open" : "logs-closed"}`}>
-          <div className="app-frame">
-            {logsOpen ? (
-              <button
-                type="button"
-                className="logs-backdrop"
-                aria-label="Hide logs"
-                onClick={() => setLogsOpen(false)}
-              />
-            ) : null}
-            {!logsOpen ? (
-              <button
-                type="button"
-                className="logs-edge-toggle"
-                data-testid="logs-open"
-                aria-label="Show logs"
-                onClick={() => setLogsOpen(true)}
-              >
-                <Icon name="logs" />
-                <span>Logs</span>
-              </button>
-            ) : null}
-            <div className="logs-column" data-testid="logs-panel" aria-hidden={!logsOpen}>
-              <DebugConsole onHide={() => setLogsOpen(false)} />
-            </div>
-            <MainWorkspace />
+          {logsOpen ? (
+            <button
+              type="button"
+              className="logs-backdrop"
+              aria-label="Hide logs"
+              onClick={() => setLogsOpen(false)}
+            />
+          ) : null}
+          {!logsOpen ? (
+            <button
+              type="button"
+              className="logs-edge-toggle"
+              data-testid="logs-open"
+              aria-label="Show logs"
+              onClick={() => setLogsOpen(true)}
+            >
+              <Icon name="logs" />
+              <span>Logs</span>
+            </button>
+          ) : null}
+          <div className="logs-column" data-testid="logs-panel" aria-hidden={!logsOpen}>
+            <DebugConsole onHide={() => setLogsOpen(false)} />
           </div>
-          <footer className="company-footer">
-            <a href="https://bluethumbtechnologies.ca" target="_blank" rel="noopener noreferrer">
-              <img src="/images/bt-logo.png" alt="" />
-              Bluethumb Technologies
-            </a>
-          </footer>
+          <MainWorkspace />
         </div>
       </ApprenticeProvider>
     </AppProvider>

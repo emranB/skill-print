@@ -1,4 +1,5 @@
 import { useApp } from "../app/AppContext";
+import { CompanyMark } from "./CompanyMark";
 import { SkeletonScene } from "./SkeletonScene";
 
 const STEPS = [
@@ -36,7 +37,10 @@ export function LandingPage() {
     <div className="landing">
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="brand">SkillPrint</p>
+          <div className="brand-row">
+            <p className="brand">SkillPrint</p>
+            <CompanyMark />
+          </div>
           <p className="landing-kicker">Physical skill apprentice</p>
           <h1>Teach a skill once. Coach every student after.</h1>
           <p className="landing-lead">

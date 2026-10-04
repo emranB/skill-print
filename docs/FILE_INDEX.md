@@ -902,6 +902,12 @@ Status: IMPLEMENTED
 
 - Implemented application module
 
+## src/frontend/components/CompanyMark.tsx
+
+Status: IMPLEMENTED
+
+- Small Bluethumb Technologies credit on the home header
+
 ## src/frontend/components/LandingPage.tsx
 
 Status: IMPLEMENTED
