@@ -4,6 +4,10 @@
 
 # SkillPrint
 
+> **Hosted App: [Open SkillPrint](https://skillprint.emranb.chatgpt.site)**
+>
+> Sign in with the owner's ChatGPT account. This deployment runs the browser/offline app; server sync and live ElevenLabs features require backend hosting.
+
 **Teach a skill once. Coach every student after.**
 
 An expert demonstrates a physical skill. SkillPrint measures the body, keeps the expert's words, and turns that into a lesson. The next person trains against a ghost of the teacher. Coaching names the joint that is off.
@@ -93,6 +97,12 @@ docker compose up
 http://localhost:8000. Other host port: `SKILLPRINT_HOST_PORT=8100 docker compose up`.
 
 Rate limits per client address: `/api/apprentice/structured` 40/min, `/api/elevenlabs/session` 20/min, `/api/transcribe` 10/min. `TRUST_PROXY` only behind a reverse proxy.
+
+## CI and Sites deployment
+
+GitHub Actions runs type checks, lint, unit tests, and a production build on pushes and pull requests to `main`. Successful pushes upload the browser build and Sites hosting manifest as a `sites-browser-build` artifact.
+
+**Automatic Sites deployment is not configured.** The available Sites integration provides short-lived source credentials and authenticated publishing tools, not a persistent CI deployment credential. Do not store a temporary Sites token in GitHub secrets. Until a supported CI publishing connection is available, publish through the Sites integration in Codex using the project in `.openai/hosting.json`.
 
 ## Architecture
 

@@ -4,6 +4,7 @@
 !.env.example
 
 # dependencies and build
+.sites-runtime/
 node_modules/
 dist/
 build/
