@@ -171,6 +171,7 @@ export interface Transcript {
 }
 
 export interface AnalyzeTeachingSessionContext {
+  kind?: "cycle" | "sequence";
   sessionId: string;
   transcript?: Transcript;
   referencePose?: NormalizedPose;
@@ -180,6 +181,9 @@ export interface AnalyzeTeachingSessionContext {
 }
 
 export interface SegmentationSummary {
+  genericEvidence?: {algorithm:string;restMs:number;radius:number;baseline:number;amplitude:number;weights:number[];
+    proposals:Array<{id:string;startMs:number;endMs:number;classification:string;reason:string}>};
+  referenceEvidence?: Array<{ startMs: number; endMs: number; quality: import("../pose/pose.types").ReferenceQuality }>;
   usableFrames: number;
   skippedLowVisibility: number;
   restSource: "supplied" | "stable_dwell" | "fallback_first_frames";

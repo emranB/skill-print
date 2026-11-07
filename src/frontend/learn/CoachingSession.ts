@@ -2,8 +2,11 @@ import type { RuntimeConfig } from "../../shared/config/config.types";
 import type { ApprenticeGateway, LearnPreparation } from "../apprentice/ApprenticeGateway";
 import type { Lesson } from "../lesson/lesson.types";
 import type { NormalizedPoseGeometry } from "../pose/pose.types";
-import type { CheckpointTrackerEvent } from "./CheckpointTracker";
+import type { ProgressTrackerEvent } from "./ProgressTracker";
+import type { RuntimeTarget } from "../lesson/RuntimeTargets";
 import { describeDeviation, largestDeviation } from "./PoseDeviation";
+import { usableHeavy } from "../../shared/movement/HeavyBody";
+import { usableArticulated } from "../../shared/movement/ArticulatedBody";
 
 /**
  * Decides when to coach and composes the cue: a geometric correction computed
@@ -21,6 +24,7 @@ export class CoachingSession {
     private readonly lesson: Lesson,
     private readonly preparation: LearnPreparation | null,
     private readonly visibilityFloor: number,
+    private readonly targets?: RuntimeTarget[],
   ) {}
 
   resetMismatch(): void {
@@ -29,12 +33,17 @@ export class CoachingSession {
 
   handleTrackerEvent(
     timestampMs: number,
-    event: CheckpointTrackerEvent,
+    event: ProgressTrackerEvent,
     pose: NormalizedPoseGeometry,
+    aligned?: { pose: NormalizedPoseGeometry; phase: string },
   ): string | null {
     if (event.type !== "MISMATCH") {
       this.resetMismatch();
       return null;
+    }
+    if (this.lesson.canonicalMovement.representation === "mediapipe-heavy-body3d-v1" && !usableHeavy(pose.body3d) ||
+      this.lesson.canonicalMovement.representation === "mediapipe-articulated-3d-v1" && !usableArticulated(pose.articulated3d)) {
+      this.resetMismatch();return null;
     }
     if (this.mismatchSince === null) {
       this.mismatchSince = timestampMs;
@@ -46,12 +55,12 @@ export class CoachingSession {
     this.lastPromptAt = timestampMs;
     this.correctionCount += 1;
 
-    const expected = this.lesson.canonicalMovement.checkpoints[event.index];
+    const expected = aligned ?? this.targets?.[event.index] ?? this.lesson.canonicalMovement.checkpoints[event.index];
     const deviation = expected ? largestDeviation(pose, expected.pose, this.visibilityFloor) : null;
-    const phaseCue = expected ? this.preparation?.cues[expected.phase] : undefined;
+    const phaseCue = expected ? this.preparation?.cues[expected.phase as keyof LearnPreparation["cues"]] : undefined;
     const cue =
       [deviation ? describeDeviation(deviation) : null, phaseCue].filter(Boolean).join(" ") ||
-      (expected ? `Match the teacher at ${expected.progress}% ${expected.phase}.` : "Match the teacher.");
+      (expected ? `Match the teacher's ${this.lesson.canonicalMovement.representation === "mediapipe-articulated-3d-v1" ? "movement" : expected.phase} shape.` : "Match the teacher.");
 
     void this.gateway.sendContextualUpdate?.({
       lessonId: this.lesson.id,

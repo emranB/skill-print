@@ -44,6 +44,9 @@ export function normalizePose(frame: PoseFrame, minimumVisibility = 0): Normaliz
   return {
     timestampMs: frame.timestampMs,
     ...normalizeLandmarks(frame.landmarks, minimumVisibility),
+    ...(frame.bodySkeleton ? { bodySkeleton: frame.bodySkeleton } : {}),
+    ...(frame.body3d ? { body3d: frame.body3d } : {}),
+    ...(frame.articulated3d ? { articulated3d: frame.articulated3d } : {}),
   };
 }
 

@@ -8,6 +8,11 @@ export interface Landmark {
 }
 
 export interface PoseFrame {
+  articulated3d?: import("../../shared/movement/ArticulatedBody").ArticulatedBody;
+  body3d?: import("../../shared/movement/HeavyBody").HeavyBody;
+  streamId?: string;
+  alignment?: { runId: string; timestampMs: number; result: MovementAlignmentReply };
+  bodySkeleton?: import("../../shared/movement/types").BodySkeleton;
   timestampMs: SessionTimeMs;
   landmarks: Landmark[];
   worldLandmarks: Landmark[];
@@ -21,6 +26,10 @@ export interface NormalizedLandmark {
 }
 
 export interface NormalizedPoseGeometry {
+  timestampMs?: SessionTimeMs;
+  articulated3d?: import("../../shared/movement/ArticulatedBody").ArticulatedBody;
+  body3d?: import("../../shared/movement/HeavyBody").HeavyBody;
+  bodySkeleton?: import("../../shared/movement/types").BodySkeleton;
   landmarks: NormalizedLandmark[];
 }
 
@@ -43,9 +52,10 @@ export type DemonstrationClassification =
   | "ignore";
 
 export interface Demonstration {
+  kind?: MovementKind;
   id: string;
   startMs: SessionTimeMs;
-  apexMs: SessionTimeMs;
+  apexMs?: SessionTimeMs;
   endMs: SessionTimeMs;
   classification: DemonstrationClassification;
   teacherConfirmed: boolean;
@@ -55,12 +65,107 @@ export interface Demonstration {
 export interface CanonicalCheckpoint {
   index: number;
   progress: 0 | 25 | 50 | 75 | 100;
-  phase: "outbound" | "apex" | "return";
+  phase: MovementPhase;
   pose: NormalizedPoseGeometry;
 }
 
 export interface CanonicalMovement {
+  schemaVersion?: 2 | 3;
+  representation?: "rtmw3d-body-v1" | "mediapipe-heavy-body3d-v1" | "mediapipe-articulated-3d-v1";
+  articulatedTolerance?: number;
+  statisticalCalibration?: import("../../shared/movement/OAS").TeacherCalibration3D;
+  references?: MovementReference[];
+  kind?: MovementKind;
+  samples?: CanonicalSample[];
+  anchors?: MovementAnchor[];
+  trajectorySource?: "dense_samples" | "demonstration_trajectories" | "legacy_checkpoints" | "coherent_3d_references";
   checkpoints: CanonicalCheckpoint[];
+}
+
+export interface MovementReference {
+  articulatedEvidence?: {sourceIndices:number[];arcLength:number;excursion:number;rejectionReasons:string[]};
+  trajectoryEvidence?: {
+    construction: "observed-trajectory-v1";
+    representation: "mediapipe-heavy-body3d-v1";
+    sourceIndices: number[];
+    arcLength: number;
+    excursion: number;
+    noise: number;
+    maximumGapMs: number;
+    terminalStartDistance: number;
+    kind: MovementKind;
+    maximumNeighborError: number;
+    startSourceIndex: number;
+    terminalSourceIndex: number;
+    rejectionReasons: string[];
+  };
+  anchorConstruction?: "observed-regions-v1";
+  quality?: ReferenceQuality;
+  teacherConfirmed: boolean;
+  alignmentEligible: boolean;
+  rejectionReason?: string;
+  demonstrationId: string;
+  samples: CanonicalSample[];
+  anchors: MovementAnchor[];
+  sourceTrajectory: NormalizedPose[];
+}
+
+export type MovementKind = "cycle" | "sequence";
+export type MovementPhase = "outbound" | "apex" | "return" | "sequence";
+
+export interface CanonicalSample {
+  progress01: number;
+  phase: MovementPhase;
+  pose: NormalizedPoseGeometry;
+}
+
+export interface MovementAlignmentReply {
+  event: "REP_SUCCESS" | "SEQUENCE_COMPLETE" | null;
+  referenceId: string;
+  similarity: number;
+  alignmentMethod?: "local_trajectory";
+  localDistance?: number | null;
+  normalizedDtwDistance: number | null;
+  currentProgressPercent: number;
+  furthestProgressPercent: number;
+  currentPhase: string;
+  lastSatisfiedAnchor: string | null;
+  runtimeTargetCount: number;
+  runtimeTargetIndex: number;
+  reason: string;
+  alignedSample: CanonicalSample;
+  usable: boolean;
+  alignmentMs: number;
+}
+
+export interface MovementAnchor extends CanonicalSample {
+  id: "start" | "apex" | "completion";
+  holdMs: number;
+  holdSource?: "teacher_requested";
+  region?: ObservedAnchorRegion;
+}
+
+export interface ObservedAnchorRegion {
+  startSourceIndex: number;
+  endSourceIndex: number;
+  startMs: number;
+  endMs: number;
+  samples: NormalizedPose[];
+  diameter: number;
+  maximumSpeed: number;
+}
+
+export interface ReferenceQuality {
+  regions: { start?: ObservedAnchorRegion; turnaround?: ObservedAnchorRegion; completion?: ObservedAnchorRegion };
+  sourceSamples: number;
+  reliableSamples: number;
+  nominalIntervalMs: number;
+  largestConfidenceGapMs: number;
+  excursion: number;
+  regionRadius: number;
+  stableSpeed: number;
+  gaps: Array<{ beforeSourceIndex: number; afterSourceIndex: number; durationMs: number; missingSamples: number; distance: number | null; coherent: boolean; reason: string }>;
+  rejectionReasons: string[];
 }
 
 export type KnowledgeSourceClass =

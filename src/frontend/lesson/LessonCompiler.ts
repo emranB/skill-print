@@ -1,6 +1,6 @@
 import { createId } from "../../shared/utils/id";
 import { DebugBus } from "../debug/DebugBus";
-import type { BodyCalibration, Demonstration, Guardrail, KnowledgeItem, NormalizedPose } from "../pose/pose.types";
+import type { BodyCalibration, Demonstration, Guardrail, KnowledgeItem, NormalizedPose, MovementKind } from "../pose/pose.types";
 import type { QuestionCandidate } from "../analyze/analyze.types";
 import { discoverRequiredLandmarks } from "../analyze/GeometrySummarizer";
 import { buildCanonicalMovement } from "./CanonicalMovementBuilder";
@@ -8,6 +8,8 @@ import type { Lesson } from "./lesson.types";
 import type { TeachBackItem } from "./TeachBackItems";
 
 export interface CompileLessonInput {
+  draft?: boolean;
+  kind?: MovementKind;
   name: string;
   importantThings?: string;
   sourceSessionId: string;
@@ -108,7 +110,7 @@ function fromAnsweredQuestions(questions: QuestionCandidate[]): {
 }
 
 export function compileLesson(input: CompileLessonInput): Lesson {
-  const canonicalMovement = buildCanonicalMovement(input.demonstrations);
+  const canonicalMovement = buildCanonicalMovement(input.demonstrations, input.kind ?? input.demonstrations[0]?.kind ?? "cycle", input.draft);
   const { knowledge, guardrails } = input.teachBackItems?.length
     ? fromTeachBack(input.teachBackItems)
     : fromAnsweredQuestions(input.questions);

@@ -20,12 +20,19 @@ async function teachFixtureToReview(page: Page, name: string) {
 /** Answers every capture and debrief question, keeps the teach-back and submits. */
 async function answerReviewAndSubmit(page: Page) {
   const captureAnswer = page.getByPlaceholder("Explain what mattered in this moment");
+  const debrief = page.locator(".debrief textarea");
+  const teachBack = page.getByRole("heading", { name: "Teach-back" });
+  const continueToTeachBack = page.getByRole("button", { name: /Continue to teach-back/ });
+  // Question generation can be asynchronous when reusing a live-service dev server.
+  await expect(captureAnswer.or(debrief).or(teachBack).or(continueToTeachBack).first()).toBeVisible({ timeout: 30_000 });
   for (let i = 0; i < 20 && (await captureAnswer.isVisible().catch(() => false)); i += 1) {
     await captureAnswer.fill(`SIMULATED TEST RESPONSE: capture answer ${i + 1}`);
     await page.getByRole("button", { name: /Next question|Continue to debrief/ }).click();
   }
-  const debrief = page.locator(".debrief textarea");
-  for (let i = 0; i < 20 && !(await page.getByRole("heading", { name: "Teach-back" }).isVisible()); i += 1) {
+  await expect(debrief.or(teachBack).or(continueToTeachBack).first()).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 20; i += 1) {
+    await expect(debrief.or(teachBack).or(continueToTeachBack).first()).toBeVisible({ timeout: 30_000 });
+    if (await teachBack.isVisible()) break;
     if (await debrief.isVisible().catch(() => false)) {
       await debrief.fill(`SIMULATED TEST RESPONSE: debrief answer ${i + 1}`);
       await page.getByRole("button", { name: /^(Next|Teach-back)$/ }).click();
@@ -63,7 +70,6 @@ test("fixture lesson survives reload and a fixture student completes a rep", asy
 
   await expect(page.getByTestId("ghost-teacher")).toHaveAttribute("data-rendered", "true");
   await expect(page.getByTestId("ghost-student")).toHaveAttribute("data-rendered", "true", { timeout: 15_000 });
-  await expect(page.getByTestId("learn-progress")).toHaveText(/reps [1-9]/, { timeout: 60_000 });
-  await page.getByRole("button", { name: "Finish lesson" }).click();
+  await expect(page.locator(".mastery-stats")).toContainText(/Completed reps\s*[1-9]/, { timeout: 60_000 });
   await expect(page.locator(".debug-console")).toContainText("REP_SUCCESS");
 });

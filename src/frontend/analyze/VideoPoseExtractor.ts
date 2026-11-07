@@ -2,6 +2,7 @@ import { DebugBus } from "../debug/DebugBus";
 import { createId } from "../../shared/utils/id";
 import { meanVisibility } from "../pose/PoseGeometry";
 import type { Landmark, PoseFrame, PoseRecording } from "../pose/pose.types";
+import { MediaPipePoseDetector } from "../pose/PoseDetector";
 
 const MAX_INFERENCE_WIDTH = 640;
 
@@ -19,6 +20,11 @@ export interface VideoPoseExtractionStats {
   analysisDurationMs: number;
   timestampMonotonic: boolean;
   finiteNormalizedSample: boolean;
+  delegate?: "GPU" | "CPU";
+  inferenceMeanMs?: number;
+  inferenceP95Ms?: number;
+  featureMeanMs?: number;
+  featureP95Ms?: number;
 }
 
 export interface VideoPoseExtractionResult {
@@ -102,8 +108,8 @@ async function createImageLandmarker(modelAssetPath: string): Promise<PoseLandma
 }
 
 /**
- * Production offline extractor: TeachingMedia.video to PoseRecording via MediaPipe.
- * Uses IMAGE mode + deterministic seeks so upload analysis does not depend on realtime playback.
+ * Teaching video uses the same Heavy VIDEO adapter as learner/live inference.
+ * Deterministic seeks make teaching analysis independent of realtime playback.
  * PoseFrame.timestampMs is SessionTimeMs = video.currentTime * 1000.
  */
 export async function extractPoseRecordingFromVideoBlob(
@@ -114,6 +120,8 @@ export async function extractPoseRecordingFromVideoBlob(
     modelAssetPath?: string;
     minimumVisibility?: number;
     onProgress?: (fraction: number) => void;
+    legacy?: boolean;
+    delegate?: "GPU" | "CPU";
   },
 ): Promise<VideoPoseExtractionResult> {
   if (typeof document === "undefined") {
@@ -133,6 +141,7 @@ export async function extractPoseRecordingFromVideoBlob(
   video.src = url;
 
   let landmarker: PoseLandmarkerImage | null = null;
+  const detector3d = options?.legacy ? null : new MediaPipePoseDetector(sampleFps,{delegate:options?.delegate});
   const frames: PoseFrame[] = [];
   let candidateFrames = 0;
   let inferenceFrames = 0;
@@ -155,14 +164,16 @@ export async function extractPoseRecordingFromVideoBlob(
       throw new Error("Video duration unavailable");
     }
 
-    landmarker = await createImageLandmarker(modelAssetPath);
+    if (detector3d) await detector3d.initialize();
+    else landmarker = await createImageLandmarker(modelAssetPath);
     DebugBus.emit({
       category: "POSE",
       event: "POSE_EXTRACT_START",
       data: {
         durationMs,
         sampleFps,
-        modelAssetPath,
+        modelAssetPath: detector3d ? "/models/pose_landmarker_heavy.task" : modelAssetPath,
+        representation: detector3d ? "mediapipe-articulated-3d-v1" : "legacy-mediapipe",
         width: video.videoWidth,
         height: video.videoHeight,
       },
@@ -201,9 +212,10 @@ export async function extractPoseRecordingFromVideoBlob(
         await seekVideo(video, Math.min(tMs / 1000, video.duration));
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         inferenceFrames += 1;
-        const result = landmarker.detect(canvas);
-        const landmarks = toLandmarks(result.landmarks?.[0]);
-        const worldLandmarks = toLandmarks(result.worldLandmarks?.[0]);
+        const inferred = detector3d ? detector3d.detectObserved(video, Math.round(video.currentTime * 1000)) : null;
+        const result = landmarker?.detect(canvas);
+        const landmarks = inferred?.landmarks ?? toLandmarks(result?.landmarks?.[0]);
+        const worldLandmarks = inferred?.worldLandmarks ?? toLandmarks(result?.worldLandmarks?.[0]);
 
         if (landmarks.length === 0) {
           emptyPoseFrames += 1;
@@ -211,7 +223,7 @@ export async function extractPoseRecordingFromVideoBlob(
           continue;
         }
 
-        const vis = meanVisibility(landmarks);
+        const vis = inferred?.bodySkeleton ? inferred.bodySkeleton.confidence.reduce((sum, c) => sum + c, 0) / inferred.bodySkeleton.confidence.length : meanVisibility(landmarks);
         visibilitySum += vis;
         visibilityCount += 1;
         if (vis < minimumVisibility) {
@@ -226,6 +238,9 @@ export async function extractPoseRecordingFromVideoBlob(
           timestampMs: Math.round(video.currentTime * 1000),
           landmarks,
           worldLandmarks,
+          ...(inferred?.bodySkeleton ? { bodySkeleton: inferred.bodySkeleton } : {}),
+          ...(inferred?.body3d ? { body3d: inferred.body3d } : {}),
+          ...(inferred?.articulated3d ? { articulated3d: inferred.articulated3d } : {}),
         });
       } finally {
         busy = false;
@@ -241,6 +256,11 @@ export async function extractPoseRecordingFromVideoBlob(
     }
 
     const stats: VideoPoseExtractionStats = {
+      ...(detector3d ? {delegate:detector3d.delegate,
+        inferenceMeanMs:detector3d.inferenceMs.reduce((s,v) => s+v,0)/Math.max(1,detector3d.inferenceMs.length),
+        inferenceP95Ms:[...detector3d.inferenceMs].sort((a,b) => a-b)[Math.floor(detector3d.inferenceMs.length*.95)] ?? 0,
+        featureMeanMs:detector3d.featureMs.reduce((s,v) => s+v,0)/Math.max(1,detector3d.featureMs.length),
+        featureP95Ms:[...detector3d.featureMs].sort((a,b) => a-b)[Math.floor(detector3d.featureMs.length*.95)] ?? 0} : {}),
       durationMs,
       sampleFps,
       candidateFrames,
@@ -275,6 +295,7 @@ export async function extractPoseRecordingFromVideoBlob(
     };
   } finally {
     landmarker?.close();
+    detector3d?.dispose();
     video.removeAttribute("src");
     video.load();
     URL.revokeObjectURL(url);

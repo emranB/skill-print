@@ -72,6 +72,7 @@ test("Level B real upload pipeline with semantic acceptance", async ({ page }) =
   expect(metadata.ok).toBe(true);
 
   await page.goto("/");
+  await page.getByTestId("logs-open").click();
   await expect(page.getByText("APPLICATION_STARTED").first()).toBeVisible({ timeout: 20_000 });
   await page.waitForFunction(async () => (await fetch("/api/config")).ok);
 

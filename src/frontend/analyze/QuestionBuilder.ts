@@ -163,12 +163,13 @@ export function findKnowledgeGaps(analysis: SessionAnalysis, config: RuntimeConf
   const demos = analysis.demonstrations.filter((d) => d.classification !== "fragment" && d.classification !== "ignore");
   for (const demo of demos) {
     if (narrated(demo)) continue;
-    const clip = clipAround(demo.apexMs, config);
+    const moment = demo.apexMs ?? (demo.startMs + demo.endMs) / 2;
+    const clip = clipAround(moment, config);
     gaps.push({
       id: createId(),
       type: "attention",
       demonstrationId: demo.id,
-      timestampMs: demo.apexMs,
+      timestampMs: moment,
       ...clip,
       evidence: analysis.observations.filter(
         (o) => o.startMs !== undefined && inWindow(o.startMs, demo.startMs, demo.endMs),
@@ -193,12 +194,13 @@ export function findKnowledgeGaps(analysis: SessionAnalysis, config: RuntimeConf
     } else {
       const demo = demos[0] ?? analysis.demonstrations[0];
       if (demo) {
-        const clip = clipAround(demo.apexMs, config);
+        const moment = demo.apexMs ?? (demo.startMs + demo.endMs) / 2;
+        const clip = clipAround(moment, config);
         gaps.push({
           id: createId(),
           type: "failure",
           demonstrationId: demo.id,
-          timestampMs: demo.apexMs,
+          timestampMs: moment,
           ...clip,
           evidence: analysis.observations.filter(
             (o) => o.startMs !== undefined && inWindow(o.startMs, demo.startMs, demo.endMs),

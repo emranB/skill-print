@@ -1,5 +1,7 @@
 import { DebugBus } from "../debug/DebugBus";
 import type { Landmark, PoseFrame } from "./pose.types";
+import { heavyBody, HEAVY_MODEL } from "../../shared/movement/HeavyBody";
+import { articulatedBody } from "../../shared/movement/ArticulatedBody";
 
 const STATS_INTERVAL_MS = 1000;
 
@@ -42,9 +44,13 @@ export class MediaPipePoseDetector implements PoseDetector {
   private busy = false;
   private lastInferAt = 0;
   private readonly sampleIntervalMs: number;
+  private disposed = false;
+  inferenceMs: number[] = [];
+  featureMs: number[] = [];
+  delegate: "GPU" | "CPU" = "GPU";
   private stats = { frames: 0, visibleSum: 0, minVisible: Number.POSITIVE_INFINITY, since: 0 };
 
-  constructor(sampleFps = 15) {
+  constructor(sampleFps = 15, private readonly options: { legacy?: boolean; delegate?: "GPU" | "CPU"; representation?:string } = {}) {
     this.sampleIntervalMs = 1000 / Math.max(1, sampleFps);
   }
 
@@ -53,21 +59,31 @@ export class MediaPipePoseDetector implements PoseDetector {
       const vision = await import("@mediapipe/tasks-vision");
       const { PoseLandmarker, FilesetResolver } = vision;
       const wasm = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm",
+        "/models/wasm",
       );
-      this.landmarker = (await PoseLandmarker.createFromOptions(wasm, {
+      const create = async (delegate: "GPU" | "CPU") => (await PoseLandmarker.createFromOptions(wasm, {
         baseOptions: {
-          modelAssetPath: "/models/pose_landmarker_full.task",
-          delegate: "GPU",
+          modelAssetPath: this.options.legacy ? "/models/pose_landmarker_full.task" : HEAVY_MODEL,
+          delegate,
         },
         runningMode: "VIDEO",
         numPoses: 1,
       })) as unknown as PoseLandmarkerLike;
+      this.delegate = this.options.delegate ?? "GPU";
+      try { this.landmarker = await create(this.delegate); }
+      catch (error) {
+        if (this.delegate === "CPU") throw error;
+        this.delegate = "CPU";
+        this.landmarker = await create("CPU");
+        DebugBus.emit({ category: "POSE",event: "POSE_DETECTOR_GPU_FALLBACK",message: "Using browser CPU inference" });
+      }
+      if (this.disposed) { this.landmarker.close(); this.landmarker=null; return; }
 
       DebugBus.emit({
         category: "POSE",
         event: "POSE_DETECTOR_READY",
         message: "MediaPipe Pose Landmarker initialized",
+        data: { delegate: this.delegate, model: this.options.legacy ? "full-legacy" : "heavy",runningMode:"VIDEO" },
       });
     } catch (error) {
       DebugBus.emit({
@@ -105,21 +121,36 @@ export class MediaPipePoseDetector implements PoseDetector {
     this.busy = true;
     this.lastInferAt = now;
     try {
+      return this.detectObserved(video,timestampMs);
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Offline seeks use exactly the live VIDEO inference/representation, without wall-clock throttling. */
+  detectObserved(video: HTMLVideoElement, timestampMs: number): PoseFrame | null {
+      if (!this.landmarker || this.disposed) return null;
+      const now = performance.now();
+      const started = now;
       const result = this.landmarker.detectForVideo(video, now);
+      this.inferenceMs.push(performance.now()-started);
       const landmarks = toLandmarks(result.landmarks?.[0]);
       const worldLandmarks = toLandmarks(result.worldLandmarks?.[0]);
       if (landmarks.length === 0) return null;
 
       this.recordStats(landmarks, timestampMs, now);
+      const featureStarted=performance.now();
+      const body3d=!this.options.legacy && this.options.representation==="mediapipe-heavy-body3d-v1" ? heavyBody(worldLandmarks,landmarks) : undefined;
+      const articulated3d=!this.options.legacy && this.options.representation!=="mediapipe-heavy-body3d-v1" ? articulatedBody(worldLandmarks,landmarks) : undefined;
+      this.featureMs.push(performance.now()-featureStarted);
 
       return {
         timestampMs,
         landmarks,
         worldLandmarks,
+        ...(body3d ? { body3d } : {}),
+        ...(articulated3d ? { articulated3d } : {}),
       };
-    } finally {
-      this.busy = false;
-    }
   }
 
   /** One debug summary per second instead of one event per frame. */
@@ -147,6 +178,7 @@ export class MediaPipePoseDetector implements PoseDetector {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.landmarker?.close();
     this.landmarker = null;
   }

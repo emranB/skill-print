@@ -7,8 +7,8 @@ export const lessonsRouter = Router();
 
 const store = createLessonStore(path.join(loadEnv().rootDir, "lessons"));
 
-lessonsRouter.get("/lessons", async (_req, res) => {
-  const lessons = await store.list();
+lessonsRouter.get("/lessons", async (req, res) => {
+  const lessons = req.query.summary === "1" ? await store.listSummaries() : await store.list();
   res.json({ lessons });
 });
 

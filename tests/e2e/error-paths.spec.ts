@@ -139,6 +139,7 @@ test("a damaged stored lesson is skipped and reported, not loaded", async ({ pag
   await page.reload();
   await page.getByRole("button", { name: /Learn a Skill/i }).click();
   await expect(page.getByRole("heading", { name: "Choose a lesson" })).toBeVisible();
+  await expect(page.locator(".debug-console")).toContainText("STORAGE_READY", { timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Damaged Lesson" })).toHaveCount(0);
   await expect(page.locator(".debug-console")).toContainText("LESSON_INVALID");
 });

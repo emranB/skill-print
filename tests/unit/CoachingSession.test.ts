@@ -38,6 +38,6 @@ describe("coaching session", () => {
   it("falls back to the checkpoint when there is no measurable joint error and no prepared cue", () => {
     const session = new CoachingSession(new MockApprenticeGateway(), config, lesson, null, 0.5);
     session.handleTrackerEvent(0, mismatch, body(0));
-    expect(session.handleTrackerEvent(600, mismatch, body(0))).toBe("Match the teacher at 0% outbound.");
+    expect(session.handleTrackerEvent(600, mismatch, body(0))).toBe("Match the teacher's outbound shape.");
   });
 });

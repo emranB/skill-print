@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { DebugBus } from "../debug/DebugBus";
 import { LivePoseLoop } from "./LivePoseLoop";
 import { MediaPipePoseDetector } from "./PoseDetector";
+import { RTMW3DPoseDetector } from "./RTMW3DPoseDetector";
 import type { PoseFrame } from "./pose.types";
 
 export type LivePoseStatus = "idle" | "starting" | "running" | "error";
@@ -9,6 +10,8 @@ export type LivePoseStatus = "idle" | "starting" | "running" | "error";
 interface UseLivePoseOptions {
   fps: number;
   now?: () => number;
+  legacy?: boolean;
+  representation?: string;
 }
 
 /**
@@ -19,8 +22,8 @@ interface UseLivePoseOptions {
 export function useLivePose(
   stream: MediaStream | null,
   enabled: boolean,
-  onFrame: (frame: PoseFrame) => void,
-  { fps, now }: UseLivePoseOptions,
+  onFrame: (frame: PoseFrame) => unknown,
+  { fps, now, legacy = false, representation }: UseLivePoseOptions,
 ): LivePoseStatus {
   const [status, setStatus] = useState<LivePoseStatus>("idle");
   const onFrameRef = useRef(onFrame);
@@ -38,7 +41,7 @@ export function useLivePose(
     video.muted = true;
     video.playsInline = true;
     video.srcObject = stream;
-    const detector = new MediaPipePoseDetector(fps * 4);
+    const detector = representation === "rtmw3d-body-v1" ? new RTMW3DPoseDetector() : new MediaPipePoseDetector(fps * 4,{legacy,representation});
     let loop: LivePoseLoop | null = null;
     setStatus("starting");
 
@@ -83,7 +86,7 @@ export function useLivePose(
       video.pause();
       video.srcObject = null;
     };
-  }, [enabled, stream, fps]);
+  }, [enabled, stream, fps, legacy, representation]);
 
   return status;
 }

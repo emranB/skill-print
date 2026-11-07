@@ -11,7 +11,7 @@ import type { Demonstration } from "../../src/frontend/pose/pose.types";
 
 const config = {
   schemaVersion: 1 as const,
-  pose: { leniency: 0.25, minimumVisibility: 0.65, sampleFps: 15, checkpointHoldMs: 150 },
+  pose: { matchDifficulty: 75, leniency: 0.25, minimumVisibility: 0.65, sampleFps: 15, checkpointHoldMs: 150 },
   calibration: { lostTrackingMs: 1000 },
   review: { clipBeforeMs: 1500, clipAfterMs: 1500, maximumQuestions: 6 },
   coaching: { mismatchPersistenceMs: 500, minimumPromptIntervalMs: 2500 },

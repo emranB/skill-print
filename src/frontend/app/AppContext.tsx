@@ -26,6 +26,7 @@ interface AppContextState {
   /** The user picked a mode explicitly, so the server default no longer applies. */
   apprenticeModeChosen: boolean;
   lessons: LessonSummary[];
+  lessonsLoading: boolean;
   selectedLessonId: string | null;
   statusMessage: string;
   errorMessage?: string;
@@ -49,6 +50,7 @@ const initialState: AppContextState = {
   apprenticeConfigured: null,
   apprenticeModeChosen: false,
   lessons: [],
+  lessonsLoading: true,
   selectedLessonId: null,
   statusMessage: "Ready",
 };
@@ -61,7 +63,12 @@ function reducer(state: AppContextState, action: AppAction): AppContextState {
         ...state,
         state: accepted ? action.state : state.state,
         errorMessage: accepted ? action.errorMessage : state.errorMessage,
-        lastTransition: { from: state.state, to: action.state, accepted, seq: (state.lastTransition?.seq ?? 0) + 1 },
+        lastTransition: {
+          from: state.state,
+          to: action.state,
+          accepted,
+          seq: (state.lastTransition?.seq ?? 0) + 1,
+        },
       };
     }
     case "SET_CONFIG":
@@ -73,7 +80,11 @@ function reducer(state: AppContextState, action: AppAction): AppContextState {
         uploadFile: action.source === "upload" ? state.uploadFile : null,
       };
     case "SET_UPLOAD_FILE":
-      return { ...state, uploadFile: action.file, inputSource: action.file ? "upload" : state.inputSource };
+      return {
+        ...state,
+        uploadFile: action.file,
+        inputSource: action.file ? "upload" : state.inputSource,
+      };
     case "SET_APPRENTICE_MODE":
       return { ...state, apprenticeMode: action.mode, apprenticeModeChosen: true };
     case "APPRENTICE_STATUS_LOADED":
@@ -83,7 +94,7 @@ function reducer(state: AppContextState, action: AppAction): AppContextState {
         apprenticeMode: state.apprenticeModeChosen ? state.apprenticeMode : action.defaultMode,
       };
     case "SET_LESSONS":
-      return { ...state, lessons: action.lessons };
+      return { ...state, lessons: action.lessons, lessonsLoading: false };
     case "SET_SELECTED_LESSON":
       return { ...state, selectedLessonId: action.lessonId };
     case "SET_STATUS_MESSAGE":
@@ -98,12 +109,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 async function loadLessonSummaries(): Promise<LessonSummary[]> {
   try {
     const { LessonRepository } = await import("../storage/LessonRepository");
-    const lessons = await LessonRepository.list();
-    return lessons.map((lesson) => ({
-      id: lesson.id,
-      name: lesson.name,
-      updatedAt: lesson.updatedAt,
-    }));
+    return await LessonRepository.listSummaries();
   } catch {
     return [];
   }
@@ -131,9 +137,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const t = state.lastTransition;
     if (!t) return;
     if (t.accepted) {
-      DebugBus.emit({ category: "APP", event: "STATE_TRANSITION", data: { from: t.from, to: t.to } });
+      DebugBus.emit({
+        category: "APP",
+        event: "STATE_TRANSITION",
+        data: { from: t.from, to: t.to },
+      });
     } else {
-      DebugBus.emit({ category: "APP", level: "warn", event: "INVALID_TRANSITION", message: `${t.from} to ${t.to}` });
+      DebugBus.emit({
+        category: "APP",
+        level: "warn",
+        event: "INVALID_TRANSITION",
+        message: `${t.from} to ${t.to}`,
+      });
     }
   }, [state.lastTransition]);
 

@@ -9,6 +9,7 @@ import { elevenLabsRouter } from "./routes/elevenlabs.js";
 import { healthRouter } from "./routes/health.js";
 import { lessonsRouter } from "./routes/lessons.js";
 import { transcribeRouter } from "./routes/transcribe.js";
+import { movementRouter } from "./routes/movement.js";
 
 const env = loadEnv();
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api", configRouter);
 app.use("/api", transcribeRouter);
 app.use("/api", elevenLabsRouter);
 app.use("/api", apprenticeRouter);
+app.use("/api", movementRouter);
 
 const clientDir = path.join(env.rootDir, "dist/client");
 if (env.isProduction && fs.existsSync(clientDir)) {

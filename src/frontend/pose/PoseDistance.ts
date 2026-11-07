@@ -1,4 +1,6 @@
 import type { NormalizedPoseGeometry } from "./pose.types";
+import { rawFeatureDistance, usableHeavy } from "../../shared/movement/HeavyBody";
+import { articulatedDistance } from "../../shared/movement/ArticulatedBody";
 
 const MAJOR_JOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
 
@@ -16,6 +18,23 @@ export function poseDistance(
   b: NormalizedPoseGeometry,
   options?: PoseDistanceOptions,
 ): number {
+  if(a.articulated3d || b.articulated3d) return a.articulated3d && b.articulated3d && !a.body3d && !b.body3d && !a.bodySkeleton && !b.bodySkeleton
+    ? articulatedDistance(a.articulated3d,b.articulated3d).distance : Infinity;
+  if (a.body3d || b.body3d) return usableHeavy(a.body3d) && usableHeavy(b.body3d)
+    ? rawFeatureDistance(a.body3d,b.body3d) : Infinity;
+  if (Boolean(a.bodySkeleton) !== Boolean(b.bodySkeleton)) return Infinity;
+  if (a.bodySkeleton && b.bodySkeleton) {
+    if (!a.bodySkeleton.orientationReliable || !b.bodySkeleton.orientationReliable) return Infinity;
+    let squared = 0;
+    let count = 0;
+    a.bodySkeleton.bones.forEach((v, i) => {
+      const w = b.bodySkeleton!.bones[i];
+      if (!w || Math.min(a.bodySkeleton!.boneConfidence[i]!, b.bodySkeleton!.boneConfidence[i]!) < 0.5) return;
+      squared += v.reduce((sum, x, j) => sum + (x - w[j]!) ** 2, 0);
+      count++;
+    });
+    return count < 6 ? Infinity : Math.sqrt(squared / count);
+  }
   const minimumVisibility = options?.minimumVisibility ?? 0.3;
   const indices = options?.indices ?? MAJOR_JOINTS;
   const planar = options?.planar ?? false;

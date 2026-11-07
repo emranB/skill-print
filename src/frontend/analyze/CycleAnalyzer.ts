@@ -4,6 +4,9 @@ import { poseDistance } from "../pose/PoseDistance";
 import type { Demonstration, Landmark, NormalizedPose, PoseFrame } from "../pose/pose.types";
 import { isUsablePose, usabilityFloor } from "../pose/PoseUsability";
 import type { SegmentationSummary } from "./analyze.types";
+import { inspectTeacherMotion, isReliableBodyPose } from "./TeacherMotionEvidence";
+import { heavyCycles } from "./HeavySegmentation";
+import { articulatedProposals } from "./ArticulatedTeaching";
 
 export interface CycleDetectionOptions {
   minimumVisibility?: number;
@@ -63,7 +66,7 @@ function smoothFrames(frames: PoseFrame[], radius: number): PoseFrame[] {
       }
       return { x: median(xs), y: median(ys), z: median(zs), visibility: median(vs) };
     });
-    return { timestampMs: frame.timestampMs, landmarks, worldLandmarks: frame.worldLandmarks };
+    return { ...frame, landmarks };
   });
 }
 
@@ -100,6 +103,8 @@ export function detectCyclesWithDiagnostics(
   referencePose?: NormalizedPose,
   options?: CycleDetectionOptions,
 ): { demonstrations: Demonstration[]; diagnostics: SegmentationSummary } {
+  if (frames.some(f => f.articulated3d)) return articulatedProposals(frames);
+  if (frames.some(f => f.body3d)) return heavyCycles(frames);
   const floor = usabilityFloor(options?.minimumVisibility);
   const empty: SegmentationSummary = {
     usableFrames: 0,
@@ -110,7 +115,7 @@ export function detectCyclesWithDiagnostics(
     completeCycles: 0,
     fragmentCycles: 0,
   };
-  const usableRaw = frames.filter((f) => isUsablePose(f.landmarks, floor));
+  const usableRaw = frames.filter((f) => f.bodySkeleton ? isReliableBodyPose(normalizePose(f)) : isUsablePose(f.landmarks, floor));
   if (usableRaw.length < 3) return { demonstrations: [], diagnostics: empty };
 
   const usable = smoothFrames(usableRaw, TUNING.smoothRadius);
@@ -169,7 +174,7 @@ export function detectCyclesWithDiagnostics(
   let restSource: SegmentationSummary["restSource"];
   let restDwellMs = 0;
   const globalClusters = clusterRuns(stableRuns(0, poses.length - 1));
-  if (referencePose) {
+  if (referencePose && Boolean(referencePose.bodySkeleton) === Boolean(poses[0]!.bodySkeleton)) {
     rest = referencePose;
     restSource = "supplied";
   } else if (globalClusters.length > 0) {
@@ -282,6 +287,8 @@ export function detectCyclesWithDiagnostics(
       regimes: regimeSummaries,
       completeCycles,
       fragmentCycles,
+      referenceEvidence: frames.some((f) => f.bodySkeleton) ? demonstrations.map((d) => ({ startMs: d.startMs, endMs: d.endMs,
+        quality: inspectTeacherMotion(frames.filter((f) => f.timestampMs >= d.startMs && f.timestampMs <= d.endMs).map(normalizePose), "cycle").quality })) : undefined,
     },
   };
 }

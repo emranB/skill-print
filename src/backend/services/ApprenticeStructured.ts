@@ -58,6 +58,7 @@ export const TeachBackInputSchema = z.object({
 
 export const LearnPrepInputSchema = z.object({
   skill: z.string().max(120),
+  kind: z.enum(["cycle", "sequence"]).default("cycle"),
   knowledge: z.array(z.object({ kind: z.string().max(40), text: z.string().max(240) })).max(20),
   guardrails: z.array(z.string().max(240)).max(8),
 });
@@ -134,8 +135,10 @@ function learnPrepPrompt(input: z.infer<typeof LearnPrepInputSchema>): string {
     HEADER,
     `You learned "${input.skill}" from an expert and now coach a learner who copies the movement in front of a camera.`,
     "p: one open question asked before the first attempt. Pick the single most important point below and ask the learner to predict it concretely (which body part, which direction, what to feel or check, or why), without revealing the answer. Name a specific body part or moment of the movement. Never ask generically what matters most. At most 25 words.",
-    "c: for each movement phase that a point clearly fits (outbound = moving away from the start position, apex = the furthest point, return = coming back to the start), one corrective cue of at most 12 words in the expert's own terms. Omit phases no point fits.",
-    'Return {"p":"question","c":[{"ph":"outbound|apex|return","t":"cue"}]}',
+    input.kind === "sequence"
+      ? "c: use only phase sequence (an ordered one-way movement, no apex or return). Give a corrective cue of at most 12 words in the expert's own terms only when grounded in a point below."
+      : "c: for each movement phase that a point clearly fits (outbound = moving away from the start position, apex = the furthest point, return = coming back to the start), one corrective cue of at most 12 words in the expert's own terms. Omit phases no point fits.",
+    input.kind === "sequence" ? 'Return {"p":"question","c":[{"ph":"sequence","t":"cue"}]}' : 'Return {"p":"question","c":[{"ph":"outbound|apex|return","t":"cue"}]}',
     ...input.knowledge.map((k, i) => `${i} (${k.kind}) ${k.text}`),
     ...input.guardrails.map((g, i) => `avoid ${i}: ${g}`),
   ].join("\n");

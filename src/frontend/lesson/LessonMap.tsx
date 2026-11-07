@@ -31,9 +31,13 @@ function Provenance({
         <span className="tag" data-source={provenance.sourceClass}>
           {SOURCE_LABEL[provenance.sourceClass]}
         </span>
-        {provenance.alignment ? <span className="tag">{provenance.alignment.toLowerCase()}</span> : null}
+        {provenance.alignment ? (
+          <span className="tag">{provenance.alignment.toLowerCase()}</span>
+        ) : null}
         {provenance.simulated ? <span className="tag warn">SIMULATED TEST RESPONSE</span> : null}
-        {provenance.transcriptStartMs !== undefined ? ` said at ${seconds(provenance.transcriptStartMs)}` : null}
+        {provenance.transcriptStartMs !== undefined
+          ? ` said at ${seconds(provenance.transcriptStartMs)}`
+          : null}
       </p>
       {provenance.transcriptText && provenance.transcriptText !== statement ? (
         <blockquote>"{provenance.transcriptText}"</blockquote>
@@ -49,7 +53,9 @@ function Provenance({
           ) : null}
         </p>
       ) : null}
-      {provenance.correctedFrom ? <p className="muted">Originally: {provenance.correctedFrom}</p> : null}
+      {provenance.correctedFrom ? (
+        <p className="muted">Originally: {provenance.correctedFrom}</p>
+      ) : null}
       {provenance.geometry?.length ? (
         <details className="geometry-details">
           <summary>Measured movement ({provenance.geometry.length})</summary>
@@ -67,7 +73,8 @@ function Provenance({
           </button>
         ) : (
           <span className="muted">
-            Evidence {seconds(startMs)} to {seconds(endMs)} (source video is not stored with the lesson)
+            Evidence {seconds(startMs)} to {seconds(endMs)} (source video is not stored with the
+            lesson)
           </span>
         )
       ) : null}
@@ -78,7 +85,9 @@ function Provenance({
 /** Clickable Work Map: checkpoints, learned knowledge with provenance, guardrails, evidence. */
 export function LessonMap({ lesson, onReplayEvidence }: Props) {
   const knowledge = [...lesson.knowledge].sort(
-    (a, b) => (a.provenance.transcriptStartMs ?? a.provenance.startMs ?? 1e12) - (b.provenance.transcriptStartMs ?? b.provenance.startMs ?? 1e12),
+    (a, b) =>
+      (a.provenance.transcriptStartMs ?? a.provenance.startMs ?? 1e12) -
+      (b.provenance.transcriptStartMs ?? b.provenance.startMs ?? 1e12),
   );
   return (
     <div className="lesson-map">
@@ -90,7 +99,10 @@ export function LessonMap({ lesson, onReplayEvidence }: Props) {
         <ol className="checkpoint-list">
           {lesson.canonicalMovement.checkpoints.map((cp) => (
             <li key={`${cp.index}-${cp.phase}-${cp.progress}`}>
-              {cp.progress}%, {cp.phase}
+              {cp.progress}%,{" "}
+              {cp.phase === "sequence" && lesson.canonicalMovement.kind === "cycle"
+                ? "cycle"
+                : cp.phase}
             </li>
           ))}
         </ol>
@@ -106,7 +118,11 @@ export function LessonMap({ lesson, onReplayEvidence }: Props) {
               <li key={item.id} data-kind={item.kind}>
                 <strong>{item.statement}</strong>
                 {item.kind !== "unknown" ? <span className="muted"> ({item.kind})</span> : null}
-                <Provenance provenance={item.provenance} statement={item.statement} onReplayEvidence={onReplayEvidence} />
+                <Provenance
+                  provenance={item.provenance}
+                  statement={item.statement}
+                  onReplayEvidence={onReplayEvidence}
+                />
               </li>
             ))}
           </ul>
@@ -122,7 +138,11 @@ export function LessonMap({ lesson, onReplayEvidence }: Props) {
             {lesson.guardrails.map((g) => (
               <li key={g.id}>
                 <strong>{g.statement}</strong>
-                <Provenance provenance={g.provenance} statement={g.statement} onReplayEvidence={onReplayEvidence} />
+                <Provenance
+                  provenance={g.provenance}
+                  statement={g.statement}
+                  onReplayEvidence={onReplayEvidence}
+                />
               </li>
             ))}
           </ul>
@@ -134,7 +154,8 @@ export function LessonMap({ lesson, onReplayEvidence }: Props) {
         <ul>
           {lesson.demonstrations.map((d, i) => (
             <li key={d.id}>
-              Repetition {i + 1}: {seconds(d.startMs)} to {seconds(d.endMs)}
+              {lesson.canonicalMovement.kind === "sequence" ? "Sequence" : "Repetition"} {i + 1}:{" "}
+              {seconds(d.startMs)} to {seconds(d.endMs)}
               {d.classification !== "unknown" ? `, ${d.classification}` : ""}{" "}
               {onReplayEvidence ? (
                 <button type="button" onClick={() => onReplayEvidence(d.startMs, d.endMs)}>

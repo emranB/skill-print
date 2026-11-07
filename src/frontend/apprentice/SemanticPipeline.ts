@@ -47,6 +47,7 @@ export interface PhraseContext {
 
 export interface LearnPrepInput {
   skill: string;
+  kind?: "cycle" | "sequence";
   knowledge: Array<{ kind: string; text: string }>;
   guardrails: string[];
 }
@@ -359,10 +360,13 @@ export async function buildLearnPreparation(lesson: Lesson, model: SemanticModel
   if (!model || knowledge.length + guardrails.length === 0) return fallbackLearnPreparation(lesson);
   try {
     const parsed = LearnPreparationResponseSchema.parse(
-      await model.prepare({ skill: quote(lesson.name, 120), knowledge, guardrails }),
+      await model.prepare({ skill: quote(lesson.name, 120), kind: lesson.canonicalMovement.kind ?? "cycle", knowledge, guardrails }),
     );
     const cues: LearnPreparation["cues"] = {};
-    for (const cue of parsed.c) cues[cue.ph] ??= cue.t.trim();
+    for (const cue of parsed.c) {
+      if (lesson.canonicalMovement.kind === "sequence" && cue.ph !== "sequence") continue;
+      cues[cue.ph] ??= cue.t.trim();
+    }
     DebugBus.emit({ category: "AI", event: "LEARN_PREPARED", data: { phases: Object.keys(cues) } });
     return { predictionQuestion: parsed.p.trim(), cues, preparedBy: "apprentice_model" };
   } catch (error) {

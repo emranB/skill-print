@@ -29,6 +29,28 @@ function sample(id: string, name: string) {
 }
 
 describe("lesson store", () => {
+  it("lists only metadata for large teaching histories without changing the saved record", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "skillprint-lessons-"));
+    dirs.push(dir);
+    const store = createLessonStore(dir),
+      lesson = {
+        ...sample("large", "Large reference"),
+        canonicalMovement: {
+          sourceTrajectory: Array.from({ length: 1000 }, (_, i) => ({
+            timestampMs: i,
+            landmarks: Array(33).fill({ x: 0, y: 0, z: 0 }),
+          })),
+        },
+      };
+    expect((await store.save(lesson)).ok).toBe(true);
+    const before = await fs.readFile(path.join(dir, "large.json"), "utf8");
+    expect(await store.listSummaries()).toEqual([
+      { id: lesson.id, name: lesson.name, updatedAt: lesson.updatedAt },
+    ]);
+    expect(JSON.stringify(await store.listSummaries()).length).toBeLessThan(200);
+    expect(await store.read(lesson.id)).toEqual(lesson);
+    expect(await fs.readFile(path.join(dir, "large.json"), "utf8")).toBe(before);
+  });
   it("writes a lesson file and reads it back", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "skillprint-lessons-"));
     dirs.push(dir);
@@ -40,6 +62,10 @@ describe("lesson store", () => {
     expect(raw).toContain("Keep the chest up");
     expect(await store.read("lesson-1")).toMatchObject({ name: "Balance step" });
     expect(await store.list()).toHaveLength(1);
+    expect(await store.listSummaries()).toEqual([
+      { id: lesson.id, name: lesson.name, updatedAt: lesson.updatedAt },
+    ]);
+    expect(await fs.readFile(path.join(dir, "lesson-1.json"), "utf8")).toBe(raw);
   });
 
   it("rejects a path-like id and a lesson that is missing its name", async () => {
@@ -49,7 +75,9 @@ describe("lesson store", () => {
 
     expect((await store.save({ ...sample("ok", "Named"), name: "" })).ok).toBe(false);
     await expect(store.read("../secret")).resolves.toBeUndefined();
-    await expect(store.save({ ...sample("ok", "Named"), id: "../secret" })).resolves.toEqual({ ok: false });
+    await expect(store.save({ ...sample("ok", "Named"), id: "../secret" })).resolves.toEqual({
+      ok: false,
+    });
     expect(await store.list()).toEqual([]);
   });
 });

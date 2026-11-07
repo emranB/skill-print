@@ -12,4 +12,9 @@ describe("AppMachine", () => {
     expect(canTransition("HOME", "LEARN_ACTIVE")).toBe(false);
     expect(transition("HOME", "LEARN_ACTIVE")).toBe("HOME");
   });
+  it("can recover failed teaching analysis and retry an unsaved lesson", () => {
+    expect(canTransition("TEACH_ANALYZING", "TEACH_RECORDING_REVIEW")).toBe(true);
+    expect(canTransition("TEACH_LESSON_REVIEW", "TEACH_RECORDING")).toBe(true);
+    expect(canTransition("TEACH_LESSON_REVIEW", "TEACH_READY")).toBe(true);
+  });
 });

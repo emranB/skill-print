@@ -49,6 +49,16 @@ function lessonWith(knowledge: string[]): Lesson {
 }
 
 describe("learn preparation", () => {
+  it("prepares sequence cues without importing cyclic apex or return semantics", async () => {
+    const lesson = lessonWith(["Keep the elbow high."]);
+    lesson.canonicalMovement.kind = "sequence";
+    const prepared = await buildLearnPreparation(lesson, model(null, {
+      p: "Which direction will your elbow move first?",
+      c: [{ ph: "sequence", t: "Keep the elbow high" }, { ph: "apex", t: "Hold the apex" }],
+    }));
+    expect(prepared.cues).toEqual({ sequence: "Keep the elbow high" });
+    expect(prepared.preparedBy).toBe("apprentice_model");
+  });
   it("uses validated model cues keyed by phase", async () => {
     const prepared = await buildLearnPreparation(
       lessonWith(["Keep the elbow high."]),

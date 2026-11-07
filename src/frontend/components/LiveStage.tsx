@@ -12,10 +12,13 @@ const GHOST_EASE = 0.22;
 
 interface Props {
   stream: MediaStream | null;
+  videoElement?: HTMLVideoElement | null;
   /** The person's latest detected pose, in image-normalized coordinates. */
   landmarks?: Landmark[] | null;
   /** Optional target pose drawn behind the person. */
   ghost?: Landmark[] | null;
+  ghostFloor?: number;
+  maxRenderDimension?: number;
   floor: number;
   /** Draw untracked joints as red rings so the person sees what the camera is missing. */
   showMissing?: boolean;
@@ -28,12 +31,25 @@ interface Props {
  * crop identically and the skeleton stays on the body. Drawing runs on
  * animation frames and eases toward each new detection.
  */
-export function LiveStage({ stream, landmarks = null, ghost = null, floor, showMissing = false, children }: Props) {
+export function LiveStage({ stream, videoElement, landmarks = null, ghost = null, ghostFloor = 0, maxRenderDimension = Infinity, floor, showMissing = false, children }: Props) {
+  const videoHostRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [size, setSize] = useState({ width: 640, height: 480 });
   const targetRef = useRef({ landmarks, ghost });
   const shownRef = useRef<{ student: Landmark[] | null; ghost: Landmark[] | null }>({ student: null, ghost: null });
   targetRef.current = { landmarks, ghost };
+  useEffect(() => {
+    if (!videoElement || !videoHostRef.current) return;
+    videoElement.className = "video-viewport";
+    videoHostRef.current.appendChild(videoElement);
+    const update = () => {
+      const width = videoElement.videoWidth || 640, height = videoElement.videoHeight || 480;
+      const scale = Math.min(1, maxRenderDimension / Math.max(width, height));
+      setSize({ width: Math.round(width * scale), height: Math.round(height * scale) });
+    };
+    update(); videoElement.addEventListener("loadedmetadata", update);
+    return () => { videoElement.removeEventListener("loadedmetadata", update); videoElement.remove(); };
+  }, [videoElement, maxRenderDimension]);
 
   useEffect(() => {
     let frame = 0;
@@ -45,7 +61,7 @@ export function LiveStage({ stream, landmarks = null, ghost = null, floor, showM
         shown.student = target.landmarks?.length ? easePose(shown.student, target.landmarks, STUDENT_EASE) : null;
         shown.ghost = target.ghost?.length ? easePose(shown.ghost, target.ghost, GHOST_EASE) : null;
         ctx.clearRect(0, 0, size.width, size.height);
-        if (shown.ghost) drawSkeleton(ctx, shown.ghost, size.width, size.height, { color: GHOST, floor: 0, alpha: 0.88 });
+        if (shown.ghost) drawSkeleton(ctx, shown.ghost, size.width, size.height, { color: GHOST, floor: ghostFloor, alpha: 0.88 });
         if (shown.student) {
           drawSkeleton(ctx, shown.student, size.width, size.height, {
             color: TRACKED,
@@ -58,11 +74,14 @@ export function LiveStage({ stream, landmarks = null, ghost = null, floor, showM
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [floor, showMissing, size]);
+  }, [floor, ghostFloor, showMissing, size]);
 
   return (
     <div className="stage-stack live-stage" data-testid="live-stage" data-tracking={Boolean(landmarks?.length)}>
-      <VideoViewport stream={stream} onFrameSize={(width, height) => setSize({ width, height })} />
+      {videoElement ? <div ref={videoHostRef} className="learner-video-host" /> : <VideoViewport stream={stream} onFrameSize={(width, height) => {
+        const scale = Math.min(1, maxRenderDimension / Math.max(width, height));
+        setSize({ width: Math.round(width * scale), height: Math.round(height * scale) });
+      }} />}
       <canvas
         ref={canvasRef}
         className="skeleton-canvas"

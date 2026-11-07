@@ -22,7 +22,7 @@ const STEPS = [
 
 /** Home screen: product story, skeleton scene, and the two main actions. */
 export function LandingPage() {
-  const { lessons, inputSource, uploadFile, goTo, dispatch } = useApp();
+  const { lessons, lessonsLoading, inputSource, uploadFile, goTo, dispatch } = useApp();
 
   const sourceLine =
     inputSource === "upload"
@@ -44,8 +44,8 @@ export function LandingPage() {
           <p className="landing-kicker">Physical skill apprentice</p>
           <h1>Teach a skill once. Coach every student after.</h1>
           <p className="landing-lead">
-            You demonstrate the movement. SkillPrint measures the body and keeps your words. A learner
-            then trains against a ghost of you.
+            You demonstrate the movement. SkillPrint measures the body and keeps your words. A
+            learner then trains against a ghost of you.
           </p>
           <div className="home-actions">
             <button type="button" className="primary" onClick={() => goTo("TEACH_CALIBRATION")}>
@@ -68,7 +68,9 @@ export function LandingPage() {
         </div>
         <figure className="landing-stage">
           <SkeletonScene />
-          <figcaption>Green follows the body. Orange is the saved teacher, scaled to the student.</figcaption>
+          <figcaption>
+            Green follows the body. Orange is the saved teacher, scaled to the student.
+          </figcaption>
         </figure>
       </section>
 
@@ -88,7 +90,11 @@ export function LandingPage() {
           <p className="muted">{sourceLine}</p>
         </div>
         {lessons.length === 0 ? (
-          <p className="muted">No saved lessons yet. Teach a skill to create the first one.</p>
+          <p className="muted">
+            {lessonsLoading
+              ? "Loading lessons..."
+              : "No saved lessons yet. Teach a skill to create the first one."}
+          </p>
         ) : (
           <ul>
             {lessons.map((lesson) => (

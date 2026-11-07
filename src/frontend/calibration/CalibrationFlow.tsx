@@ -13,6 +13,8 @@ import type { CalibrationHealth, CalibrationMetricState } from "./calibration.ty
 
 interface Props {
   mode: "teach" | "learn";
+  legacy?: boolean;
+  representation?: string;
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -33,7 +35,7 @@ function checkClass(health: CalibrationHealth | boolean): string {
   return "";
 }
 
-export function CalibrationFlow({ mode, onComplete, onCancel }: Props) {
+export function CalibrationFlow({ mode, onComplete, onCancel, legacy = false, representation }: Props) {
   const { config, inputSource } = useApp();
   const [monitor] = useState(
     () => new CalibrationMonitor(config.calibration.lostTrackingMs, config.pose.minimumVisibility),
@@ -174,7 +176,7 @@ export function CalibrationFlow({ mode, onComplete, onCancel }: Props) {
     [mode, monitor, publish],
   );
 
-  const poseStatus = useLivePose(stream, !bypassDevices && camera, onPose, { fps: config.pose.sampleFps });
+  const poseStatus = useLivePose(stream, !bypassDevices && camera, onPose, { fps: config.pose.sampleFps, legacy, representation });
 
   useEffect(() => {
     if (poseStatus !== "running") return undefined;

@@ -2,6 +2,11 @@ import { getDb } from "./IndexedDb";
 import type { Lesson } from "../lesson/lesson.types";
 import { LessonSchema } from "../lesson/LessonSchema";
 import { DebugBus } from "../debug/DebugBus";
+import { z } from "zod";
+import type { LessonSummary } from "../app/app.types";
+
+const SummarySchema = z.object({ id: z.string(), name: z.string().min(1), updatedAt: z.string() });
+const remoteVersions = new Map<string, string>();
 
 /** Stored records are validated on read; damaged ones are reported and never returned. */
 function validLesson(record: unknown): Lesson | undefined {
@@ -13,7 +18,10 @@ function validLesson(record: unknown): Lesson | undefined {
     level: "warn",
     event: "LESSON_INVALID",
     message: `Stored lesson ${id} failed validation`,
-    data: { id, issues: result.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`) },
+    data: {
+      id,
+      issues: result.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`),
+    },
   });
   return undefined;
 }
@@ -49,7 +57,11 @@ async function pushRemoteLesson(lesson: Lesson): Promise<void> {
       });
       return;
     }
-    DebugBus.emit({ category: "STORAGE", event: "LESSON_SAVED", data: { id: lesson.id, name: lesson.name } });
+    DebugBus.emit({
+      category: "STORAGE",
+      event: "LESSON_SAVED",
+      data: { id: lesson.id, name: lesson.name },
+    });
   } catch {
     DebugBus.emit({
       category: "STORAGE",
@@ -61,6 +73,32 @@ async function pushRemoteLesson(lesson: Lesson): Promise<void> {
 }
 
 export const LessonRepository = {
+  async listSummaries(): Promise<LessonSummary[]> {
+    const summaries = new Map<string, LessonSummary>();
+    const db = await getDb();
+    // Stream existing local lessons one at a time; never clone all pose histories together.
+    let cursor = await db.transaction("lessons").store.openCursor();
+    while (cursor) {
+      const lesson = validLesson(cursor.value);
+      if (lesson)
+        summaries.set(lesson.id, { id: lesson.id, name: lesson.name, updatedAt: lesson.updatedAt });
+      cursor = await cursor.continue();
+    }
+    try {
+      const response = await fetch("/api/lessons?summary=1");
+      if (response.ok) {
+        const body = z.object({ lessons: z.array(SummarySchema) }).parse(await response.json());
+        for (const summary of body.lessons) {
+          remoteVersions.set(summary.id, summary.updatedAt);
+          const local = summaries.get(summary.id);
+          if (!local || summary.updatedAt >= local.updatedAt) summaries.set(summary.id, summary);
+        }
+      }
+    } catch {
+      DebugBus.emit({ category: "STORAGE", level: "warn", event: "LESSON_SYNC_FAILED" });
+    }
+    return [...summaries.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  },
   async list(): Promise<Lesson[]> {
     await pullRemoteLessons();
     const db = await getDb();
@@ -73,7 +111,9 @@ export const LessonRepository = {
   async get(id: string): Promise<Lesson | undefined> {
     const db = await getDb();
     let record: unknown = await db.get("lessons", id);
-    if (record === undefined) {
+    const local = record === undefined ? undefined : validLesson(record);
+    const remoteVersion = remoteVersions.get(id);
+    if (record === undefined || (remoteVersion && remoteVersion > (local?.updatedAt ?? ""))) {
       try {
         const response = await fetch(`/api/lessons/${encodeURIComponent(id)}`);
         if (response.ok) {
@@ -84,7 +124,12 @@ export const LessonRepository = {
           }
         }
       } catch {
-        DebugBus.emit({ category: "STORAGE", level: "warn", event: "LESSON_SYNC_FAILED", data: { id } });
+        DebugBus.emit({
+          category: "STORAGE",
+          level: "warn",
+          event: "LESSON_SYNC_FAILED",
+          data: { id },
+        });
       }
     }
     return record === undefined ? undefined : validLesson(record);
@@ -102,7 +147,12 @@ export const LessonRepository = {
     try {
       await fetch(`/api/lessons/${encodeURIComponent(id)}`, { method: "DELETE" });
     } catch {
-      DebugBus.emit({ category: "STORAGE", level: "warn", event: "LESSON_SYNC_FAILED", data: { id } });
+      DebugBus.emit({
+        category: "STORAGE",
+        level: "warn",
+        event: "LESSON_SYNC_FAILED",
+        data: { id },
+      });
     }
   },
 };

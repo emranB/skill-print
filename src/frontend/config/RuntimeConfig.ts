@@ -4,6 +4,8 @@ import type { RuntimeConfig, RuntimeConfigSnapshot } from "../../shared/config/c
 const DEFAULT_CONFIG: RuntimeConfig = {
   schemaVersion: 1,
   pose: {
+    matchDifficulty: 75,
+    angleWeight: 0,
     leniency: 0.25,
     minimumVisibility: 0.65,
     sampleFps: 15,

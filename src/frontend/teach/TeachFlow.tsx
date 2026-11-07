@@ -60,6 +60,12 @@ export function TeachFlow() {
     pendingDemonstrations,
     setPendingDemonstrations,
     setAnalysis,
+    setQuestions,
+    setDebriefQuestions,
+    setTeachBackItems,
+    setTeachBackText,
+    setTeachBackConfirmed,
+    setDraftLesson,
   } = useTeachPipeline();
 
   const [recording, setRecording] = useState(false);
@@ -179,6 +185,14 @@ export function TeachFlow() {
     setCaptureError(null);
     setRecording(true);
     setPendingDemonstrations([]);
+    setAnalysis(null);
+    setQuestions([]);
+    setDebriefQuestions([]);
+    setTeachBackItems([]);
+    setTeachBackText("");
+    setTeachBackConfirmed(false);
+    setDraftLesson(null);
+    setSession((s) => ({ ...s, media: undefined, liveInterview: undefined }));
 
     if (inputSource === "fixture") {
       try {
@@ -252,6 +266,13 @@ export function TeachFlow() {
     session.lessonName,
     session.referencePose,
     setPendingDemonstrations,
+    setAnalysis,
+    setQuestions,
+    setDebriefQuestions,
+    setTeachBackItems,
+    setTeachBackText,
+    setTeachBackConfirmed,
+    setDraftLesson,
     setSession,
     stream,
     uploadFile,
@@ -349,6 +370,7 @@ export function TeachFlow() {
 
       setAnalysisStage(session.media.poseRecording?.frames.length ? "Finding repetitions..." : "Reading body poses...");
       const raw = await analyzeTeachingSession(session.media, {
+        kind: session.kind,
         sessionId: session.id,
         referencePose: session.referencePose,
         transcript,
@@ -392,6 +414,7 @@ export function TeachFlow() {
     goTo,
     pendingDemonstrations,
     session.id,
+    session.kind,
     session.liveInterview?.windows,
     session.media,
     session.referencePose,
@@ -449,8 +472,9 @@ export function TeachFlow() {
       <SkillSetup
         initialName={session.lessonName}
         initialImportantThings={session.importantThings}
-        onContinue={(name, importantThings) => {
-          setSession((s) => ({ ...s, lessonName: name, importantThings }));
+        initialKind={session.kind}
+        onContinue={(name, importantThings, kind) => {
+          setSession((s) => ({ ...s, lessonName: name, importantThings, kind }));
           goTo("TEACH_READY");
         }}
         onCancel={() => goTo("HOME")}

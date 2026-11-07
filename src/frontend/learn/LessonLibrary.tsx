@@ -1,13 +1,15 @@
 import { useApp } from "../app/AppContext";
 
 export function LessonLibrary() {
-  const { lessons, dispatch, goTo } = useApp();
+  const { lessons, lessonsLoading, dispatch, goTo } = useApp();
 
   return (
     <div className="lesson-library flow-panel">
       <h2>Choose a lesson</h2>
       {lessons.length === 0 ? (
-        <p className="muted">No lessons yet. Teach a skill first.</p>
+        <p className="muted">
+          {lessonsLoading ? "Loading lessons..." : "No lessons yet. Teach a skill first."}
+        </p>
       ) : (
         <ul className="lesson-pick-list">
           {lessons.map((lesson) => (
@@ -21,7 +23,9 @@ export function LessonLibrary() {
                 }}
               >
                 <strong>{lesson.name}</strong>
-                <span className="muted">Updated {new Date(lesson.updatedAt).toLocaleDateString()}</span>
+                <span className="muted">
+                  Updated {new Date(lesson.updatedAt).toLocaleDateString()}
+                </span>
               </button>
             </li>
           ))}

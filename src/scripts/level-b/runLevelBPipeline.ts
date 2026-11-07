@@ -265,7 +265,7 @@ export async function runLevelBPipeline(
   const ok =
     scribeStatus !== "FAIL" &&
     parsed.success &&
-    lesson.canonicalMovement.checkpoints.length === 9 &&
+    lesson.canonicalMovement.checkpoints.length === (lesson.canonicalMovement.representation?.startsWith("mediapipe-") ? 5 : 9) &&
     capture.length >= 3 &&
     debriefQs.length >= 3 &&
     Boolean(reloaded);

@@ -5,13 +5,8 @@ import { MainWorkspace } from "../components/MainWorkspace";
 import { Icon } from "../components/Icon";
 import { DebugConsole } from "../debug/DebugConsole";
 
-function logsStartOpen(): boolean {
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(min-width: 961px)").matches;
-}
-
 export function App() {
-  const [logsOpen, setLogsOpen] = useState(logsStartOpen);
+  const [logsOpen, setLogsOpen] = useState(false);
 
   return (
     <AppProvider>

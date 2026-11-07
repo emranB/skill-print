@@ -46,12 +46,114 @@ function harness(detectDelayMs: number) {
     await Promise.resolve();
     await Promise.resolve();
   };
-  return { loop, frames, step, resolveDetections, calls: () => calls, scheduled: () => callbacks.length };
+  return {
+    loop,
+    frames,
+    step,
+    resolveDetections,
+    calls: () => calls,
+    scheduled: () => callbacks.length,
+  };
 }
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("LivePoseLoop", () => {
+  it("drains an EOF observation once without resuming recorded playback", async () => {
+    let callback!: () => void;
+    let resolveDetection!: (frame: PoseFrame) => void;
+    const frames: PoseFrame[] = [];
+    const video = { readyState: 4, paused: false, ended: true, pause: vi.fn(), play: vi.fn() };
+    const detector: PoseDetector = {
+      initialize: async () => undefined,
+      dispose: () => undefined,
+      isBusy: () => false,
+      detect: () =>
+        new Promise<PoseFrame>((resolve) => {
+          resolveDetection = resolve;
+        }),
+    };
+    const loop = new LivePoseLoop(detector, video as unknown as HTMLVideoElement, {
+      pauseDuringDetection: true,
+      now: () => 100,
+      onFrame: (frame) => frames.push(frame),
+      requestFrame: (cb) => {
+        callback = cb;
+        return 1;
+      },
+      cancelFrame: vi.fn(),
+    });
+    loop.start();
+    callback();
+    const drained = loop.drain();
+    resolveDetection({ timestampMs: 100, landmarks: [], worldLandmarks: [] });
+    await drained;
+    expect(frames).toHaveLength(1);
+    expect(video.play).not.toHaveBeenCalled();
+    expect(loop.isRunning()).toBe(false);
+  });
+  it.each([false, true])(
+    "pauses recorded media through slow inference and never resumes after stop=%s",
+    async (stop) => {
+      let mediaMs = 0;
+      let callback: (() => void) | undefined;
+      let resolveDetection!: (frame: PoseFrame) => void;
+      const frames: PoseFrame[] = [];
+      const video = {
+        readyState: 4,
+        paused: false,
+        ended: false,
+        pause: vi.fn(function (this: { paused: boolean }) {
+          this.paused = true;
+        }),
+        play: vi.fn(async function (this: { paused: boolean }) {
+          this.paused = false;
+        }),
+      };
+      const detector: PoseDetector = {
+        initialize: async () => undefined,
+        dispose: () => undefined,
+        isBusy: () => false,
+        detect: vi.fn(
+          () =>
+            new Promise<PoseFrame>((resolve) => {
+              resolveDetection = resolve;
+            }),
+        ),
+      };
+      const loop = new LivePoseLoop(detector, video as unknown as HTMLVideoElement, {
+        fps: 15,
+        pauseDuringDetection: true,
+        now: () => mediaMs,
+        onFrame: (frame) => frames.push(frame),
+        requestFrame: (cb) => {
+          callback = cb;
+          return 1;
+        },
+        cancelFrame: () => {
+          callback = undefined;
+        },
+      });
+      loop.start();
+      callback!();
+      expect(video.pause).toHaveBeenCalledOnce();
+      expect(video.paused).toBe(true);
+      if (stop) loop.stop();
+      resolveDetection({ timestampMs: mediaMs, landmarks: [], worldLandmarks: [] });
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(video.play).toHaveBeenCalledTimes(stop ? 0 : 1);
+      expect(frames).toHaveLength(stop ? 0 : 1);
+      if (!stop) {
+        callback!();
+        expect(detector.detect).toHaveBeenCalledOnce();
+        mediaMs = 67;
+        callback!();
+        expect(detector.detect).toHaveBeenCalledTimes(2);
+        loop.stop();
+        resolveDetection({ timestampMs: mediaMs, landmarks: [], worldLandmarks: [] });
+      }
+    },
+  );
   it("throttles detection to the configured rate", async () => {
     const h = harness(0);
     h.loop.start();

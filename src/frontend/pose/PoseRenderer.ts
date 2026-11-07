@@ -19,6 +19,12 @@ export const SKELETON_CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
 
 /** Hands and feet: drawn thinner, and only where tracked, so they never add noise. */
 export const EXTREMITY_CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
+  [15, 17],
+  [17, 19],
+  [15, 21],
+  [16, 18],
+  [18, 20],
+  [16, 22],
   [15, 19],
   [16, 20],
   [27, 29],

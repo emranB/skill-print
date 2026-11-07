@@ -3,6 +3,7 @@ import type { TeachingMedia } from "../media/media.types";
 import type { LiveInterviewResult } from "../apprentice/LiveInterview";
 
 export interface TeachingSession {
+  kind?: "cycle" | "sequence";
   schemaVersion: 1;
   id: string;
   createdAt: string;

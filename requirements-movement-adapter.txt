@@ -1,0 +1,3 @@
+# Install with --no-deps: upstream's unpinned CPU ORT/OpenCV requirements conflict
+# with the explicitly pinned DirectML/OpenCV runtime on Windows.
+rtmlib @ https://github.com/Tau-J/rtmlib/archive/03a1693e59e4f7cd84582c0fb30459b3bf18ad42.zip

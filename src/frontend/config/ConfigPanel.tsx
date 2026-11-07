@@ -18,8 +18,14 @@ export function ConfigPanel() {
       </summary>
       <div className="tune-body">
         <label className="tune-row">
+          <span className="tune-label">Match Difficulty Level<strong>{config.pose.matchDifficulty}</strong></span>
+          <span className="tune-hint">Controls how closely SkillPrint follows each stage of the learned movement.</span>
+          <input type="range" min={1} max={100} step={1} value={config.pose.matchDifficulty}
+            onChange={(e) => setConfig(RuntimeConfigManager.update({ pose: { ...config.pose, matchDifficulty: Number(e.target.value) } }))} />
+        </label>
+        <label className="tune-row">
           <span className="tune-label">
-            Leniency
+            Legacy leniency
             <strong>{leniency}</strong>
           </span>
           <input
@@ -37,7 +43,7 @@ export function ConfigPanel() {
               )
             }
           />
-          <span className="tune-hint">How far a pose can be and still count as a match.</span>
+          <span className="tune-hint">Legacy 2D tolerance. Articulated lessons use fixed tolerance 0.25.</span>
         </label>
         <label className="tune-row">
           <span className="tune-label">

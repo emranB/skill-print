@@ -32,6 +32,7 @@ export type StoredLesson = z.infer<typeof StoredLessonSchema>;
 
 export interface LessonStore {
   list(): Promise<StoredLesson[]>;
+  listSummaries(): Promise<Array<Pick<StoredLesson, "id" | "name" | "updatedAt">>>;
   read(id: string): Promise<StoredLesson | undefined>;
   save(lesson: unknown): Promise<{ ok: true } | { ok: false }>;
   remove(id: string): Promise<void>;
@@ -55,6 +56,17 @@ export function createLessonStore(directory: string): LessonStore {
   };
 
   return {
+    async listSummaries() {
+      await fs.mkdir(directory, { recursive: true });
+      const summaries: Array<Pick<StoredLesson, "id" | "name" | "updatedAt">> = [];
+      for (const name of await fs.readdir(directory)) {
+        if (!name.endsWith(".json")) continue;
+        const lesson = await readFile(path.join(directory, name));
+        if (lesson)
+          summaries.push({ id: lesson.id, name: lesson.name, updatedAt: lesson.updatedAt });
+      }
+      return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    },
     async list() {
       await fs.mkdir(directory, { recursive: true });
       const names = await fs.readdir(directory);

@@ -36,6 +36,10 @@ export function CaptureSourceControls() {
 
   const useVideo = () => {
     if (!uploadFile) return;
+    if (inLearn) {
+      if (state !== "LEARN_LIBRARY" && state !== "LEARN_COMPLETE") goTo("LEARN_CALIBRATION");
+      return;
+    }
     DebugBus.emit({
       category: "MEDIA",
       event: "UPLOAD_FILE_ACCEPTED",
@@ -47,8 +51,8 @@ export function CaptureSourceControls() {
     }
   };
 
-  const showCamera = inputSource === "live" || inLearn;
-  const showUpload = inputSource === "upload" && !inLearn;
+  const showCamera = inputSource === "live";
+  const showUpload = inputSource === "upload";
 
   return (
     <div className="capture-source side-card" data-testid="capture-source">

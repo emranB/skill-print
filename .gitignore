@@ -6,6 +6,12 @@
 # dependencies and build
 .sites-runtime/
 node_modules/
+.venv-movement/
+.movement-models/
+data/diagnostic-models/
+public/models/wasm/
+__pycache__/
+.pytest_cache/
 dist/
 build/
 coverage/

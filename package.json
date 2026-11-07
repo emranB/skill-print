@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare:pose": "node src/scripts/preparePoseAssets.mjs",
+    "predev:client": "npm run prepare:pose",
+    "prebuild": "npm run prepare:pose",
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
     "dev:server": "tsx watch src/backend/index.ts",

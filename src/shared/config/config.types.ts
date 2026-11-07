@@ -1,6 +1,8 @@
 export interface RuntimeConfig {
   schemaVersion: 1;
   pose: {
+    matchDifficulty: number;
+    angleWeight?: number;
     leniency: number;
     minimumVisibility: number;
     sampleFps: number;

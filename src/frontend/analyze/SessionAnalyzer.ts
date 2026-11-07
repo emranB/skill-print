@@ -3,6 +3,8 @@ import { RuntimeConfigManager } from "../config/RuntimeConfig";
 import { assertTeachingMedia, type TeachingMedia } from "../media/media.types";
 import type { PoseRecording } from "../pose/pose.types";
 import { detectCyclesWithDiagnostics } from "./CycleAnalyzer";
+import { detectSequence } from "./SequenceAnalyzer";
+import { singleArticulatedExecution } from "./ArticulatedTeaching";
 import { summarizeGeometryWindow } from "./GeometrySummarizer";
 import { buildTimelineNotes } from "./TimelineAligner";
 import { extractPoseRecordingFromVideoBlob } from "./VideoPoseExtractor";
@@ -76,9 +78,11 @@ export async function analyzeTeachingSession(
 
   const frames = poseRecording.frames;
   const minimumVisibility = context.configSnapshot.config.pose.minimumVisibility;
-  const { demonstrations, diagnostics } = detectCyclesWithDiagnostics(frames, context.referencePose, {
-    minimumVisibility,
-  });
+  const singleCapture=media.source==="live" && frames.some(f => f.articulated3d);
+  const cycleResult = context.kind === "sequence" || singleCapture ? null : detectCyclesWithDiagnostics(frames, context.referencePose, { minimumVisibility });
+  const demonstrations = singleCapture
+    ? singleArticulatedExecution(frames,context.kind??"cycle") : cycleResult?.demonstrations ?? detectSequence(frames, minimumVisibility);
+  const diagnostics = cycleResult?.diagnostics;
 
   const observations = demonstrations.flatMap((demo) =>
     summarizeGeometryWindow(frames, demo.startMs, demo.endMs, { apexMs: demo.apexMs }),

@@ -1,4 +1,8 @@
 node_modules
+.venv-movement
+.movement-models
+__pycache__
+.pytest_cache
 dist
 .git
 .env

@@ -1,5 +1,6 @@
 import { clamp } from "../../shared/utils/math";
 import { poseSimilarity } from "./PoseDistance";
+import { anglePenalty } from "./PoseAngles";
 import type { NormalizedPoseGeometry } from "./pose.types";
 
 export interface CompareResult {
@@ -16,13 +17,15 @@ export function comparePose(
     leniency: number;
     minimumVisibility: number;
     trackingValid: boolean;
+    angleWeight?: number;
   },
 ): CompareResult {
   const requiredSimilarity = clamp(1 - options.leniency, 0.15, 0.95);
-  const similarity = poseSimilarity(student, target, {
+  const positionalSimilarity = poseSimilarity(student, target, {
     minimumVisibility: options.minimumVisibility,
     planar: true,
   });
+  const similarity = Math.max(0, positionalSimilarity - anglePenalty(student, target, options.minimumVisibility, options.angleWeight).penalty);
   const trackingValid = options.trackingValid;
   const passed = trackingValid && similarity >= requiredSimilarity;
   return {

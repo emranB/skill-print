@@ -140,7 +140,7 @@ test("upload Teach runs real extraction, transcription and semantics into a save
 
   const map = page.locator(".lesson-map");
   await expect(map).toBeVisible();
-  await expect(map.locator(".checkpoint-list > li")).toHaveCount(9);
+  await expect(map.locator(".checkpoint-list > li")).toHaveCount(5);
   await expect(map).toContainText("SIMULATED TEST RESPONSE: corrected teach-back point");
   await expect(map.locator("blockquote").first()).toBeVisible();
   await expect(map).not.toContainText(/placeholder|lorem|TODO|undefined|NaN/i);
@@ -193,7 +193,7 @@ test("the saved lesson survives a reload with its full contract intact", async (
     trackingProfile: { requiredLandmarks: number[] };
   };
   expect(lesson.schemaVersion).toBe(1);
-  expect(lesson.canonicalMovement.checkpoints).toHaveLength(9);
+  expect(lesson.canonicalMovement.checkpoints).toHaveLength(5);
   expect(lesson.knowledge.some((k) => k.provenance.sourceClass === "EXPLICIT_TEACHING" && k.provenance.transcriptText)).toBe(true);
   expect(lesson.knowledge.some((k) => k.provenance.sourceClass === "CONFIRMED_TEACH_BACK")).toBe(true);
   expect(lesson.trackingProfile.requiredLandmarks.length).toBeGreaterThan(0);
@@ -230,9 +230,10 @@ test("live Learn tracks the fake camera against the saved lesson with ghost and 
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     const text = (await progress.textContent()) ?? "";
-    matches.add(/match (\d+)%/.exec(text)?.[1] ?? "");
-    indices.add(/Checkpoint (\d+)/.exec(text)?.[1] ?? "");
-    if (/reps [1-9]/.test(text)) break;
+    matches.add(/match(?: quality)? (\d+)%/.exec(text)?.[1] ?? "");
+    indices.add((await progress.getAttribute("data-index")) ?? "");
+    // Fast successful repetitions must not truncate the existing variation measurement.
+    if (/reps [1-9]/.test(text) && [...matches].filter((m) => Number(m) > 0).length > 3) break;
     await page.waitForTimeout(250);
   }
   const final = (await progress.textContent()) ?? "";

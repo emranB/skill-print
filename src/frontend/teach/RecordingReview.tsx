@@ -51,7 +51,7 @@ export function RecordingReview({
           {demonstrations.map((demo, index) => (
             <li key={demo.id}>
               <span>
-                Cycle {index + 1}: {(demo.startMs / 1000).toFixed(1)}s to {(demo.endMs / 1000).toFixed(1)}s
+                {demo.kind === "sequence" ? "Take" : "Cycle"} {index + 1}: {(demo.startMs / 1000).toFixed(1)}s to {(demo.endMs / 1000).toFixed(1)}s
               </span>
               <div className="cycle-classify">
                 {CLASSIFICATIONS.map((c) => (

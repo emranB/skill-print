@@ -15,6 +15,8 @@ test("camera on and off work from Home, and logs slide out of the way", async ({
   await page.getByTestId("camera-off").click();
   await expect(page.getByTestId("camera-status")).toHaveText("Camera off");
 
+  await expect(page.getByTestId("logs-open")).toBeVisible();
+  await page.getByTestId("logs-open").click();
   await expect(page.getByText("Debug / Logs")).toBeVisible();
   await page.getByTestId("logs-hide").click();
   await expect(page.getByTestId("logs-open")).toBeVisible();
